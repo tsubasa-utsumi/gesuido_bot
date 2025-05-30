@@ -32,13 +32,23 @@
 
 ## 🛠️ セットアップ
 
-### 1. 必要なファイル
+### 前提条件
+- Python 3.13
+- Git
+
+### Python 3.13のインストール（WSL Ubuntuの場合）
 ```bash
-chmod +x setup.sh
-./setup.sh
+chmod +x install-python313.sh
+./install-python313.sh
 ```
 
-### 2. 依存関係のインストール
+### 1. プロジェクトのセットアップ
+```bash
+chmod +x python313-setup.sh
+./python313-setup.sh
+```
+
+### 2. 仮想環境の有効化と依存関係のインストール
 ```bash
 source venv/bin/activate
 pip install -r requirements.txt
