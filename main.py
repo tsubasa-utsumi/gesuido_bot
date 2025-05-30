@@ -1,8 +1,7 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import os
-import asyncio
-from datetime import datetime, time
+from datetime import datetime
 import pytz
 from dotenv import load_dotenv
 
@@ -17,6 +16,8 @@ REACTION_RULES = {
   'うんこ': '<:blobpoop:1235236342594539581>',
   'んち': '<:blobpoop:1235236342594539581>',
   '<:n_:1375806870543138927> <:ti:1375806832660058142>': '<:blobpoop:1235236342594539581>',
+  'まんこ': '🦪',
+  'ちんちん': '🛎️'
 }
 
 def validate_emoji(emoji_str):
@@ -32,37 +33,6 @@ def validate_emoji(emoji_str):
   
   return True, "Unicode絵文字"
 
-def is_active_hours():
-  """現在が稼働時間かどうかを判定（JST AM10:00-AM2:00）"""
-  now_jst = datetime.now(JST)
-  current_time = now_jst.time()
-  
-  # AM10:00-翌日AM2:00が稼働時間
-  start_time = time(10, 0)  # AM10:00
-  end_time = time(2, 0)     # AM2:00
-  
-  if start_time <= current_time or current_time < end_time:
-    return True
-  return False
-
-def get_next_wake_time():
-  """次の起動時刻を取得"""
-  now_jst = datetime.now(JST)
-  current_time = now_jst.time()
-  
-  if current_time < time(2, 0):
-    # 現在AM0:00-AM2:00の場合、同日AM10:00まで待機
-    next_wake = now_jst.replace(hour=10, minute=0, second=0, microsecond=0)
-  elif current_time < time(10, 0):
-    # 現在AM2:00-AM10:00の場合、同日AM10:00まで待機
-    next_wake = now_jst.replace(hour=10, minute=0, second=0, microsecond=0)
-  else:
-    # 現在AM10:00以降の場合、翌日AM10:00まで待機
-    next_wake = now_jst.replace(hour=10, minute=0, second=0, microsecond=0)
-    next_wake = next_wake.replace(day=next_wake.day + 1)
-  
-  return next_wake
-
 # Botの設定
 intents = discord.Intents.default()
 intents.message_content = True
@@ -72,48 +42,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
   print(f'{bot.user} がログインしました！')
   print(f'Bot ID: {bot.user.id}')
-  print(f'現在時刻（JST）: {datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")}')
-  
-  # 稼働時間チェック開始
-  if not schedule_checker.is_running():
-    schedule_checker.start()
-  
-  # 稼働状況を報告
-  if is_active_hours():
-    print('✅ 稼働時間内です - Botは正常に動作します')
-  else:
-    print('⏰ 停止時間内です - Botは停止準備中...')
-    next_wake = get_next_wake_time()
-    print(f'次回起動予定: {next_wake.strftime("%Y-%m-%d %H:%M:%S JST")}')
-  
-  print('------')
-
-@tasks.loop(minutes=5)
-async def schedule_checker():
-  """5分ごとに稼働時間をチェック"""
-  now_jst = datetime.now(JST)
-  
-  if not is_active_hours():
-    print(f'[{now_jst.strftime("%H:%M")}] 停止時間に入りました - Botを停止します')
-    
-    # 管理者に通知（設定されている場合）
-    admin_channel_id = os.getenv('ADMIN_CHANNEL_ID')
-    if admin_channel_id:
-      try:
-        channel = bot.get_channel(int(admin_channel_id))
-        if channel:
-          next_wake = get_next_wake_time()
-          embed = discord.Embed(
-            title='🌙 Bot 定期停止',
-            description=f'節電のため停止します\n次回起動: {next_wake.strftime("%m/%d %H:%M JST")}',
-            color=discord.Color.blue()
-          )
-          await channel.send(embed=embed)
-      except:
-        pass
-    
-    # Botを停止
-    await bot.close()
 
 @bot.event
 async def on_message(message):
@@ -153,64 +81,8 @@ async def check_and_react(message):
       except Exception as e:
         print(f'予期しないエラー: {e}')
 
-@bot.command(name='schedule_status')
-async def schedule_status(ctx):
-  """現在のスケジュール状況を表示"""
-  now_jst = datetime.now(JST)
-  is_active = is_active_hours()
-  
-  embed = discord.Embed(
-    title='⏰ Bot スケジュール状況',
-    color=discord.Color.green() if is_active else discord.Color.orange()
-  )
-  
-  embed.add_field(
-    name='現在時刻（JST）',
-    value=now_jst.strftime('%Y-%m-%d %H:%M:%S'),
-    inline=False
-  )
-  
-  embed.add_field(
-    name='稼働状況',
-    value='🟢 稼働中' if is_active else '🟡 停止予定',
-    inline=True
-  )
-  
-  embed.add_field(
-    name='稼働時間',
-    value='毎日 AM10:00 - AM2:00（JST）',
-    inline=True
-  )
-  
-  if not is_active:
-    next_wake = get_next_wake_time()
-    embed.add_field(
-      name='次回起動予定',
-      value=next_wake.strftime('%m/%d %H:%M JST'),
-      inline=False
-    )
-  
-  embed.add_field(
-    name='月間稼働時間',
-    value='約480時間（500時間以内）',
-    inline=False
-  )
-  
-  await ctx.send(embed=embed)
-
-@bot.command(name='hello')
-async def hello(ctx):
-  if not is_active_hours():
-    await ctx.send('現在は停止時間です。AM10:00-AM2:00の間にお試しください。')
-    return
-  await ctx.send(f'こんにちは、{ctx.author.mention}さん！')
-
 @bot.command(name='reactions')
 async def show_reactions(ctx):
-  if not is_active_hours():
-    await ctx.send('現在は停止時間です。AM10:00-AM2:00の間にお試しください。')
-    return
-    
   embed = discord.Embed(
     title='🎭 リアクションルール一覧',
     description='以下のキーワードが含まれるメッセージに自動でリアクションします',
@@ -220,24 +92,10 @@ async def show_reactions(ctx):
   rules_text = '\n'.join([f'`{keyword}` → {emoji}' for keyword, emoji in REACTION_RULES.items()])
   embed.add_field(name='キーワード → 絵文字', value=rules_text, inline=False)
   embed.add_field(name='📝 注意', value='大文字小文字は区別しません', inline=False)
-  embed.add_field(name='⏰ 稼働時間', value='AM10:00-AM2:00（JST）のみ', inline=False)
   
   await ctx.send(embed=embed)
 
 if __name__ == '__main__':
-  # 起動時に稼働時間をチェック
-  if not is_active_hours():
-    next_wake = get_next_wake_time()
-    sleep_seconds = (next_wake - datetime.now(JST)).total_seconds()
-    
-    print(f'現在は停止時間です（JST: {datetime.now(JST).strftime("%H:%M")}）')
-    print(f'次回起動まで {sleep_seconds/3600:.1f} 時間待機...')
-    print(f'起動予定時刻: {next_wake.strftime("%Y-%m-%d %H:%M:%S JST")}')
-    
-    # 起動時刻まで待機
-    import time
-    time.sleep(sleep_seconds)
-  
   token = os.getenv('DISCORD_TOKEN')
   if token:
     # 追加の依存関係チェック
