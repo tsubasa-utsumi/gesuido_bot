@@ -48,10 +48,6 @@ async def on_message(message):
   if message.author == bot.user:
     return
   
-  # 稼働時間外はリアクションしない
-  if not is_active_hours():
-    return
-  
   await check_and_react(message)
   await bot.process_commands(message)
 
