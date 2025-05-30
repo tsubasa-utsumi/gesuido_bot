@@ -18,8 +18,7 @@ REACTION_RULES = {
   '<:n_:1375806870543138927> <:ti:1375806832660058142>': '<:blobpoop:1235236342594539581>',
   'まんこ': '🦪',
   'ちんちん': '🛎️',
-  'はしもん': '<:hashimon:1368619272372228269>',
-  'はしもん': '💋',
+  'はしもん': ['<:hashimon:1368619272372228269>', '💋'],
 }
 
 # Botの設定
@@ -40,6 +39,20 @@ async def on_message(message):
   await check_and_react(message)
   await bot.process_commands(message)
 
+async def add_reaction(message, emoji):
+  if emoji.startswith('<') and emoji.endswith('>'):
+    emoji_parts = emoji.strip('<>').split(':')
+    if len(emoji_parts) == 3:
+      emoji_name = emoji_parts[1]
+      custom_emoji = discord.utils.get(message.guild.emojis, name=emoji_name)
+      if custom_emoji:
+        await message.add_reaction(custom_emoji)
+      else:
+        print(f'カスタム絵文字が見つかりません: {emoji_name}')
+  else:
+    if len(emoji.strip()) > 0:
+      await message.add_reaction(emoji)
+
 async def check_and_react(message):
   """メッセージ内容をチェックして該当する場合リアクションを追加"""
   content = message.content.lower()
@@ -47,18 +60,11 @@ async def check_and_react(message):
   for keyword, emoji in REACTION_RULES.items():
     if keyword in content or keyword.replace(" ", "") in content:
       try:
-        if emoji.startswith('<') and emoji.endswith('>'):
-          emoji_parts = emoji.strip('<>').split(':')
-          if len(emoji_parts) == 3:
-            emoji_name = emoji_parts[1]
-            custom_emoji = discord.utils.get(message.guild.emojis, name=emoji_name)
-            if custom_emoji:
-              await message.add_reaction(custom_emoji)
-            else:
-              print(f'カスタム絵文字が見つかりません: {emoji_name}')
+        if isinstance(emoji, list):
+          for item in emoji:
+            await add_reaction(message, item)
         else:
-          if len(emoji.strip()) > 0:
-            await message.add_reaction(emoji)
+          await add_reaction(message, emoji)
         
         print(f'[{datetime.now(JST).strftime("%H:%M")}] リアクション追加: "{keyword}" -> {emoji}')
       except discord.HTTPException as e:
