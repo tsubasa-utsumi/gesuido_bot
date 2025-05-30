@@ -16,7 +16,7 @@ JST = pytz.timezone('Asia/Tokyo')
 REACTION_RULES = {
   'うんこ': '<:blobpoop:1235236342594539581>',
   'んち': '<:blobpoop:1235236342594539581>',
-  '<:n_:1375806870543138927><:ti:1375806832660058142>': '<:blobpoop:1235236342594539581>',
+  ':n_: :ti:': '<:blobpoop:1235236342594539581>',
   
 }
 
@@ -133,7 +133,7 @@ async def check_and_react(message):
   content = message.content.lower()
   
   for keyword, emoji in REACTION_RULES.items():
-    if keyword in content:
+    if keyword in content or keyword.replace(" ", "") in content:
       try:
         if emoji.startswith('<') and emoji.endswith('>'):
           emoji_parts = emoji.strip('<>').split(':')
