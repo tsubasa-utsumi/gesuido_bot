@@ -17,21 +17,9 @@ REACTION_RULES = {
   'んち': '<:blobpoop:1235236342594539581>',
   '<:n_:1375806870543138927> <:ti:1375806832660058142>': '<:blobpoop:1235236342594539581>',
   'まんこ': '🦪',
-  'ちんちん': '🛎️'
+  'ちんちん': '🛎️',
+  'はしもん': '💋',
 }
-
-def validate_emoji(emoji_str):
-  """絵文字が有効かどうかを検証"""
-  if not emoji_str or len(emoji_str.strip()) == 0:
-    return False, "空の絵文字"
-  
-  if emoji_str.startswith('<') and emoji_str.endswith('>'):
-    parts = emoji_str.strip('<>').split(':')
-    if len(parts) != 3:
-      return False, "無効なカスタム絵文字形式"
-    return True, "カスタム絵文字"
-  
-  return True, "Unicode絵文字"
 
 # Botの設定
 intents = discord.Intents.default()
