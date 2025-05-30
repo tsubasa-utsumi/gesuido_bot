@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python cron_main.py"
+startCommand = "python main.py"
 restartPolicyType = "never"
 
 # Cron設定でBotの起動/停止を管理
