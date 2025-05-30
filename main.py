@@ -16,8 +16,7 @@ JST = pytz.timezone('Asia/Tokyo')
 REACTION_RULES = {
   'うんこ': '<:blobpoop:1235236342594539581>',
   'んち': '<:blobpoop:1235236342594539581>',
-  ':n_: :ti: ': '<:blobpoop:1235236342594539581>',
-  
+  '<:n_:1375806870543138927> <:ti:1375806832660058142>': '<:blobpoop:1235236342594539581>',
 }
 
 def validate_emoji(emoji_str):
@@ -153,8 +152,6 @@ async def check_and_react(message):
         print(f'リアクション追加エラー: {e}')
       except Exception as e:
         print(f'予期しないエラー: {e}')
-    else:
-      print(f"対応外: {content}")
 
 @bot.command(name='schedule_status')
 async def schedule_status(ctx):
