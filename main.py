@@ -93,7 +93,7 @@ async def check_and_react(message):
         if isinstance(emoji, list):
           for item in emoji:
             await add_reaction(message, item)
-        if isinstance(emoji, dict):
+        elif isinstance(emoji, dict):
           item = random.choice(emoji['random'])
           await add_reaction(message, item)
         else:
