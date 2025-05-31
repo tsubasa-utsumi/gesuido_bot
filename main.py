@@ -157,7 +157,6 @@ async def slash_mynick(interaction: discord.Interaction):
   
   print(f'[{datetime.now(JST).strftime("%H:%M")}] あだ名決定: {interaction.user.display_name} -> {nickname} (固定)')
 
-
 @bot.tree.command(name='spice', description='調味料スロット！')
 async def slash_mynick(interaction: discord.Interaction):
   spices = [
@@ -213,7 +212,7 @@ async def slash_mynick(interaction: discord.Interaction):
       s2 = "マ"
       s3 = "ト"
       v = "トマトトマトトマトトマトトマトトマトトマトトマトトマト"
-  
+
   # 結果を表示
   embed = discord.Embed(
     title='調味料スロット',
@@ -225,8 +224,46 @@ async def slash_mynick(interaction: discord.Interaction):
     value=v,
     inline=False
   )
-  embed.set_footer(text=f'ほら、使え')
-  
+  embed.set_footer(text='ほら、使え')
+
+  await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name='sex', description='ちんぽスロット')
+async def slash_mynick(interaction: discord.Interaction):
+  words = [
+    "ち",
+    "ん",
+    "こ",
+    "ぽ",
+    "ま",
+    "う"
+  ]
+  s1 = random.choice(words)
+  s2 = random.choice(words)
+  s3 = random.choice(words)
+  ss = s1 + s2 + s3
+
+  v = "だってさ"
+  if "んち" in ss or "うんこ" == ss:
+    v = "うわ、くっせ:poop:"
+  elif "ちんぽ" == ss or "ちんこ" == ss or "ちちん" == ss:
+    v = ":bell:"
+  elif "まんこ" == ss:
+    v = ":oyster:"
+
+  # 結果を表示
+  embed = discord.Embed(
+    title='ちんぽスロット',
+    description=f'{interaction.user.mention} は',
+    color=discord.Color.gold()
+  )
+  embed.add_field(
+    name=f'{s1} {s2} {s3}',
+    value=v,
+    inline=False
+  )
+  embed.set_footer(text='うへぇ')
+
   await interaction.response.send_message(embed=embed)
 
 # 従来のプレフィックスコマンドも残す（互換性のため）
