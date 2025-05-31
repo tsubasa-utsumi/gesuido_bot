@@ -174,7 +174,17 @@ async def slash_mynick(interaction: discord.Interaction):
     'パクチー',
     '味の素',
     'ほんだし',
-    'コンソメ'
+    'コンソメ',
+    'めんつゆ',
+    '白だし',
+    'トマト',
+    'マヨネーズ',
+    'ケチャップ',
+    '鶏ガラ',
+    'にんにく',
+    'しょうが',
+    'オリーブオイル',
+    '味覇',
   ]
   s1 = random.choice(spices)
   s2 = random.choice(spices)
@@ -186,15 +196,23 @@ async def slash_mynick(interaction: discord.Interaction):
   counts = Counter(selected_spices)
   v = ""
 
-  if counts == 1:
+  if len(counts) == 1:
     v = f"全部{s1}！！！ 濃い味で死！"
-  elif counts == 2:
+  elif len(counts) == 2:
     v = f"2個も一緒！！！ それなりに濃い味で死！"
   else:
     v = "らしいよ"
 
   if 'パクチー' in selected_spices:
     v = f"{v} パクチーが入ってるから完全に死！！！！！"
+
+  # 特定のユーザに1/2でトマト
+  if str(interaction.user.id) == os.getenv('TOMATO_USER'):
+    if random.random() < 0.5:
+      s1 = "ト"
+      s2 = "マ"
+      s3 = "ト"
+      v = "トマトトマトトマトトマトトマトトマトトマトトマトトマト"
   
   # 結果を表示
   embed = discord.Embed(
@@ -207,7 +225,7 @@ async def slash_mynick(interaction: discord.Interaction):
     value=v,
     inline=False
   )
-  embed.set_footer(text=f'ほら、使え<:blobcat_watchyou:1237029431680438273>')
+  embed.set_footer(text=f'ほら、使え')
   
   await interaction.response.send_message(embed=embed)
 
