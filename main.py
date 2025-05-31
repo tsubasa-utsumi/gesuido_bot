@@ -158,7 +158,7 @@ async def slash_mynick(interaction: discord.Interaction):
   print(f'[{datetime.now(JST).strftime("%H:%M")}] あだ名決定: {interaction.user.display_name} -> {nickname} (固定)')
 
 
-@bot.tree.command(name='mynick', description='今日のあだ名を決定します（1日固定）')
+@bot.tree.command(name='spice', description='調味料スロット！')
 async def slash_mynick(interaction: discord.Interaction):
   spices = [
     '砂糖',
