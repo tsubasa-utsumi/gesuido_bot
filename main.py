@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import pytz
 from dotenv import load_dotenv
+import random
 
 # 環境変数を読み込み
 load_dotenv()
@@ -12,10 +13,11 @@ load_dotenv()
 JST = pytz.timezone('Asia/Tokyo')
 
 # リアクションルール
+# TODO: ランダムも加えたい
 REACTION_RULES = {
-  'うんこ': '<:blobpoop:1235236342594539581>',
-  'んち': '<:blobpoop:1235236342594539581>',
-  '<:n_:1375806870543138927> <:ti:1375806832660058142>': '<:blobpoop:1235236342594539581>',
+  'うんこ': {'random': ['<:blobpoop:1235236342594539581>', '<:poop_fairy:1377905879403335690>']},
+  'んち': {'random': ['<:blobpoop:1235236342594539581>', '<:poop_fairy:1377905879403335690>']},
+  '<:n_:1375806870543138927> <:ti:1375806832660058142>': {'random': ['<:blobpoop:1235236342594539581>', '<:poop_fairy:1377905879403335690>']},
   'まんこ': '🦪',
   'ちんちん': '🛎️',
   'はしもん': ['<:hashimon:1368619272372228269>', '💋'],
@@ -63,6 +65,9 @@ async def check_and_react(message):
         if isinstance(emoji, list):
           for item in emoji:
             await add_reaction(message, item)
+        if isinstance(emoji, dict):
+          item = random.choice(emoji['random'])
+          await add_reaction(message, item)
         else:
           await add_reaction(message, emoji)
         
