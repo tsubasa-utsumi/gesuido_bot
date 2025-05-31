@@ -44,43 +44,106 @@ jobs:
             echo "action=status" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get Environment and Service Info
+        id: info
+        run: |
+          # Environmentの取得
+          env_response=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "query project($id: String!) { project(id: $id) { environments { edges { node { id name isEphemeral } } } } }",
+              "variables": { "id": "${{ secrets.RAILWAY_PROJECT_ID }}" }
+            }' \
+            https://backboard.railway.com/graphql/v2)
+          
+          env_id=$(echo "$env_response" | jq -r '.data.project.environments.edges[] | select(.node.isEphemeral == false) | .node.id')
+          echo "environment_id=$env_id" >> $GITHUB_OUTPUT
+          
+          # Service IDを取得（GitHub Actionsの変数に保存されていない場合）
+          if [ -z "${{ vars.RAILWAY_SERVICE_ID }}" ]; then
+            service_response=$(curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "query": "query project($id: String!) { project(id: $id) { services { edges { node { id name } } } } }",
+                "variables": { "id": "${{ secrets.RAILWAY_PROJECT_ID }}" }
+              }' \
+              https://backboard.railway.com/graphql/v2)
+            
+            service_id=$(echo "$service_response" | jq -r '.data.project.services.edges[0].node.id')
+            echo "service_id=$service_id" >> $GITHUB_OUTPUT
+            echo "Service ID found: $service_id"
+          else
+            echo "service_id=${{ vars.RAILWAY_SERVICE_ID }}" >> $GITHUB_OUTPUT
+            echo "Using stored Service ID: ${{ vars.RAILWAY_SERVICE_ID }}"
+          fi
+          
+          echo "Environment ID: $env_id"
+
       - name: Stop Discord Bot
         if: steps.action.outputs.action == 'stop'
         run: |
           echo "🌙 Discord Bot を停止します (JST: ${{ steps.time.outputs.jst_time }})"
           
-          # Railway API で Bot サービスを停止
-          curl -X POST \
+          # 現在のアクティブなデプロイメントIDを取得
+          deployment_response=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query": "mutation serviceDelete($id: String!) { serviceDelete(id: $id) }",
-              "variables": { "id": "${{ secrets.RAILWAY_SERVICE_ID }}" }
+              "query": "query deployments($first: Int!, $input: DeploymentListInput!) { deployments(first: $first, input: $input) { edges { node { id status } } } }",
+              "variables": { 
+                "first": 1,
+                "input": {
+                  "projectId": "${{ secrets.RAILWAY_PROJECT_ID }}",
+                  "environmentId": "${{ steps.info.outputs.environment_id }}",
+                  "serviceId": "${{ steps.info.outputs.service_id }}"
+                }
+              }
             }' \
-            https://backboard.railway.app/graphql
-
-          echo "✅ Bot停止完了 - 次回起動: JST 10:00"
+            https://backboard.railway.com/graphql/v2)
+          
+          deployment_id=$(echo "$deployment_response" | jq -r '.data.deployments.edges[0].node.id // empty')
+          
+          if [ -n "$deployment_id" ]; then
+            # デプロイメントを削除
+            delete_response=$(curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "query": "mutation deploymentRemove($id: String!) { deploymentRemove(id: $id) }",
+                "variables": { "id": "'$deployment_id'" }
+              }' \
+              https://backboard.railway.com/graphql/v2)
+            
+            echo "Deployment deleted: $delete_response"
+            echo "✅ Bot停止完了 - 次回起動: JST 10:00"
+          else
+            echo "⚠️ アクティブなデプロイメントが見つかりません"
+          fi
 
       - name: Start Discord Bot  
         if: steps.action.outputs.action == 'start'
         run: |
           echo "🌅 Discord Bot を起動します (JST: ${{ steps.time.outputs.jst_time }})"
           
-          # Railway API で Bot サービスを起動
-          curl -X POST \
+          # サービスを最新のコミットでデプロイ
+          deploy_response=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query": "mutation serviceCreate($input: ServiceCreateInput!) { serviceCreate(input: $input) { id } }",
+              "query": "mutation serviceConnect($input: ServiceConnectInput!) { serviceConnect(input: $input) { id } }",
               "variables": { 
                 "input": {
-                  "projectId": "${{ secrets.RAILWAY_PROJECT_ID }}",
-                  "source": { "repo": "${{ github.repository }}" }
+                  "serviceId": "${{ steps.info.outputs.service_id }}",
+                  "repo": "${{ github.repository }}",
+                  "branch": "main"
                 }
               }
             }' \
-            https://backboard.railway.app/graphql
-
+            https://backboard.railway.com/graphql/v2)
+          
+          echo "Deploy Response: $deploy_response"
           echo "✅ Bot起動完了 - 停止予定: JST 02:00"
 
       - name: Restart Discord Bot
@@ -88,20 +151,23 @@ jobs:
         run: |
           echo "🔄 Discord Bot を再起動します (JST: ${{ steps.time.outputs.jst_time }})"
           
-          # Railway API で Bot サービスを再デプロイ
-          curl -X POST \
+          # サービスを再デプロイ
+          restart_response=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query": "mutation deploymentCreate($input: DeploymentCreateInput!) { deploymentCreate(input: $input) { id } }",
+              "query": "mutation serviceConnect($input: ServiceConnectInput!) { serviceConnect(input: $input) { id } }",
               "variables": { 
                 "input": {
-                  "serviceId": "${{ secrets.RAILWAY_SERVICE_ID }}"
+                  "serviceId": "${{ steps.info.outputs.service_id }}",
+                  "repo": "${{ github.repository }}",
+                  "branch": "main"
                 }
               }
             }' \
-            https://backboard.railway.app/graphql
+            https://backboard.railway.com/graphql/v2)
 
+          echo "Restart Response: $restart_response"
           echo "✅ Bot再起動完了"
 
       - name: Check Bot Status
@@ -109,17 +175,59 @@ jobs:
         run: |
           echo "📊 Discord Bot ステータス確認 (JST: ${{ steps.time.outputs.jst_time }})"
           
-          # Railway API で Bot ステータスを取得
-          response=$(curl -s -X POST \
+          # サービスとデプロイメントのステータスを取得
+          status_response=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
               "query": "query service($id: String!) { service(id: $id) { id name updatedAt } }",
-              "variables": { "id": "${{ secrets.RAILWAY_SERVICE_ID }}" }
+              "variables": { "id": "${{ steps.info.outputs.service_id }}" }
             }' \
-            https://backboard.railway.app/graphql)
+            https://backboard.railway.com/graphql/v2)
           
-          echo "Bot Status: $response"
+          deployment_response=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "query deployments($first: Int!, $input: DeploymentListInput!) { deployments(first: $first, input: $input) { edges { node { id status createdAt } } } }",
+              "variables": { 
+                "first": 1,
+                "input": {
+                  "projectId": "${{ secrets.RAILWAY_PROJECT_ID }}",
+                  "environmentId": "${{ steps.info.outputs.environment_id }}",
+                  "serviceId": "${{ steps.info.outputs.service_id }}"
+                }
+              }
+            }' \
+            https://backboard.railway.com/graphql/v2)
+          
+          echo "Service Status: $status_response"
+          echo "Deployment Status: $deployment_response"
+
+      - name: Update Service ID Variable
+        if: steps.action.outputs.action == 'start' && env.SERVICE_ID_FROM_API
+        env:
+          SERVICE_ID_FROM_API: ${{ steps.info.outputs.service_id }}
+        run: |
+          # GitHub ActionsでService IDをリポジトリ変数として保存
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{
+              "name": "RAILWAY_SERVICE_ID",
+              "value": "${{ steps.info.outputs.service_id }}"
+            }' \
+            "https://api.github.com/repos/${{ github.repository }}/actions/variables/RAILWAY_SERVICE_ID" || \
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{
+              "name": "RAILWAY_SERVICE_ID", 
+              "value": "${{ steps.info.outputs.service_id }}"
+            }' \
+            "https://api.github.com/repos/${{ github.repository }}/actions/variables"
+          
+          echo "Service ID saved as repository variable"
 
       - name: Send Discord Notification
         if: steps.action.outputs.action == 'start' || steps.action.outputs.action == 'stop'
@@ -144,12 +252,14 @@ jobs:
                 \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
               }]
             }" \
-            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+            "${{ secrets.DISCORD_WEBHOOK_URL }}" || echo "Discord notification skipped"
 
       - name: Summary
         run: |
           echo "## 🤖 Discord Bot Scheduler 実行結果" >> $GITHUB_STEP_SUMMARY
           echo "- **実行時刻**: ${{ steps.time.outputs.jst_time }} JST" >> $GITHUB_STEP_SUMMARY
           echo "- **実行アクション**: ${{ steps.action.outputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service ID**: ${{ steps.info.outputs.service_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment ID**: ${{ steps.info.outputs.environment_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **稼働スケジュール**: AM 10:00 - AM 2:00 (JST)" >> $GITHUB_STEP_SUMMARY
           echo "- **月間稼働時間**: 480時間 (Railway 500時間制限内)" >> $GITHUB_STEP_SUMMARY
