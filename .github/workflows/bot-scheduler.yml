@@ -134,10 +134,8 @@ jobs:
             -d '{
               "query": "mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) { serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId) }",
               "variables": { 
-                "input": {
-                  "serviceId": "${{ steps.info.outputs.service_id }}",
-                  "environmentId": "${{ steps.info.outputs.environment_id }}"
-                }
+                "serviceId": "${{ steps.info.outputs.service_id }}",
+                "environmentId": "${{ steps.info.outputs.environment_id }}"
               }
             }' \
             https://backboard.railway.com/graphql/v2)
@@ -157,10 +155,8 @@ jobs:
             -d '{
               "query": "mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) { serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId) }",
               "variables": { 
-                "input": {
-                  "serviceId": "${{ steps.info.outputs.service_id }}",
-                  "environmentId": "${{ steps.info.outputs.environment_id }}"
-                }
+                "serviceId": "${{ steps.info.outputs.service_id }}",
+                "environmentId": "${{ steps.info.outputs.environment_id }}"
               }
             }' \
             https://backboard.railway.com/graphql/v2)
