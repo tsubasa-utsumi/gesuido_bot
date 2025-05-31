@@ -132,12 +132,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query": "mutation serviceConnect($input: ServiceConnectInput!) { serviceConnect(input: $input) { id } }",
+              "query": "mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) { serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId) }",
               "variables": { 
                 "input": {
                   "serviceId": "${{ steps.info.outputs.service_id }}",
-                  "repo": "${{ github.repository }}",
-                  "branch": "main"
+                  "environmentId": "${{ steps.info.outputs.environment_id }}"
                 }
               }
             }' \
@@ -156,12 +155,11 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query": "mutation serviceConnect($input: ServiceConnectInput!) { serviceConnect(input: $input) { id } }",
+              "query": "mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) { serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId) }",
               "variables": { 
                 "input": {
                   "serviceId": "${{ steps.info.outputs.service_id }}",
-                  "repo": "${{ github.repository }}",
-                  "branch": "main"
+                  "environmentId": "${{ steps.info.outputs.environment_id }}"
                 }
               }
             }' \
