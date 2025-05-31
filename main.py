@@ -220,7 +220,7 @@ async def slash_mynick(interaction: discord.Interaction):
     color=discord.Color.gold()
   )
   embed.add_field(
-    name=f'{s1} {s2} {s3}',
+    name=f'{s1}　{s2}　{s3}',
     value=v,
     inline=False
   )
@@ -251,6 +251,14 @@ async def slash_mynick(interaction: discord.Interaction):
   elif "まんこ" == ss:
     v = ":oyster:"
 
+  # 特定のユーザに1/2でトマト
+  if str(interaction.user.id) == os.getenv('TOMATO_USER'):
+    if random.random() < 0.5:
+      s1 = "ト"
+      s2 = "マ"
+      s3 = "ト"
+      v = "トマトトマトトマトトマトトマトトマトトマトトマトトマト"
+
   # 結果を表示
   embed = discord.Embed(
     title='ちんぽスロット',
@@ -258,7 +266,7 @@ async def slash_mynick(interaction: discord.Interaction):
     color=discord.Color.gold()
   )
   embed.add_field(
-    name=f'{s1} {s2} {s3}',
+    name=f'{s1}　{s2}　{s3}',
     value=v,
     inline=False
   )
