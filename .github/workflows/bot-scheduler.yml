@@ -1,0 +1,155 @@
+# .github/workflows/bot-scheduler.yml
+name: Discord Bot Scheduler
+
+on:
+  schedule:
+    # 日本時間 AM 2:00 に停止 (UTC 17:00 前日)
+    - cron: '0 17 * * *'
+    # 日本時間 AM 10:00 に起動 (UTC 1:00)  
+    - cron: '0 1 * * *'
+  workflow_dispatch: # 手動実行可能
+    inputs:
+      action:
+        description: 'アクション選択'
+        required: true
+        default: 'status'
+        type: choice
+        options:
+        - 'start'
+        - 'stop'
+        - 'status'
+        - 'restart'
+
+jobs:
+  manage-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set JST Time
+        id: time
+        run: |
+          echo "jst_time=$(TZ='Asia/Tokyo' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "jst_hour=$(TZ='Asia/Tokyo' date +'%H')" >> $GITHUB_OUTPUT
+          echo "utc_time=$(date -u +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+
+      - name: Determine Action
+        id: action
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.time.outputs.jst_hour }}" = "02" ]; then
+            echo "action=stop" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.time.outputs.jst_hour }}" = "10" ]; then
+            echo "action=start" >> $GITHUB_OUTPUT
+          else
+            echo "action=status" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop Discord Bot
+        if: steps.action.outputs.action == 'stop'
+        run: |
+          echo "🌙 Discord Bot を停止します (JST: ${{ steps.time.outputs.jst_time }})"
+          
+          # Railway API で Bot サービスを停止
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation serviceDelete($id: String!) { serviceDelete(id: $id) }",
+              "variables": { "id": "${{ secrets.RAILWAY_SERVICE_ID }}" }
+            }' \
+            https://backboard.railway.app/graphql
+
+          echo "✅ Bot停止完了 - 次回起動: JST 10:00"
+
+      - name: Start Discord Bot  
+        if: steps.action.outputs.action == 'start'
+        run: |
+          echo "🌅 Discord Bot を起動します (JST: ${{ steps.time.outputs.jst_time }})"
+          
+          # Railway API で Bot サービスを起動
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation serviceCreate($input: ServiceCreateInput!) { serviceCreate(input: $input) { id } }",
+              "variables": { 
+                "input": {
+                  "projectId": "${{ secrets.RAILWAY_PROJECT_ID }}",
+                  "source": { "repo": "${{ github.repository }}" }
+                }
+              }
+            }' \
+            https://backboard.railway.app/graphql
+
+          echo "✅ Bot起動完了 - 停止予定: JST 02:00"
+
+      - name: Restart Discord Bot
+        if: steps.action.outputs.action == 'restart'
+        run: |
+          echo "🔄 Discord Bot を再起動します (JST: ${{ steps.time.outputs.jst_time }})"
+          
+          # Railway API で Bot サービスを再デプロイ
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation deploymentCreate($input: DeploymentCreateInput!) { deploymentCreate(input: $input) { id } }",
+              "variables": { 
+                "input": {
+                  "serviceId": "${{ secrets.RAILWAY_SERVICE_ID }}"
+                }
+              }
+            }' \
+            https://backboard.railway.app/graphql
+
+          echo "✅ Bot再起動完了"
+
+      - name: Check Bot Status
+        if: steps.action.outputs.action == 'status'
+        run: |
+          echo "📊 Discord Bot ステータス確認 (JST: ${{ steps.time.outputs.jst_time }})"
+          
+          # Railway API で Bot ステータスを取得
+          response=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "query service($id: String!) { service(id: $id) { id name updatedAt } }",
+              "variables": { "id": "${{ secrets.RAILWAY_SERVICE_ID }}" }
+            }' \
+            https://backboard.railway.app/graphql)
+          
+          echo "Bot Status: $response"
+
+      - name: Send Discord Notification
+        if: steps.action.outputs.action == 'start' || steps.action.outputs.action == 'stop'
+        run: |
+          if [ "${{ steps.action.outputs.action }}" = "start" ]; then
+            message="🌅 **Bot起動通知**\n⏰ 時刻: ${{ steps.time.outputs.jst_time }} JST\n✅ Discord リアクションBot が稼働開始しました\n⏱️ 次回停止: 明日 AM 2:00"
+            color="3066993"
+          else
+            message="🌙 **Bot停止通知**\n⏰ 時刻: ${{ steps.time.outputs.jst_time }} JST\n😴 Discord リアクションBot を停止しました\n⏱️ 次回起動: AM 10:00"
+            color="15158332"
+          fi
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"description\": \"$message\",
+                \"color\": $color,
+                \"footer\": {
+                  \"text\": \"GitHub Actions Bot Scheduler\"
+                },
+                \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
+              }]
+            }" \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Summary
+        run: |
+          echo "## 🤖 Discord Bot Scheduler 実行結果" >> $GITHUB_STEP_SUMMARY
+          echo "- **実行時刻**: ${{ steps.time.outputs.jst_time }} JST" >> $GITHUB_STEP_SUMMARY
+          echo "- **実行アクション**: ${{ steps.action.outputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **稼働スケジュール**: AM 10:00 - AM 2:00 (JST)" >> $GITHUB_STEP_SUMMARY
+          echo "- **月間稼働時間**: 480時間 (Railway 500時間制限内)" >> $GITHUB_STEP_SUMMARY
