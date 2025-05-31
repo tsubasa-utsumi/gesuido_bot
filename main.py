@@ -7,6 +7,7 @@ import pytz
 from dotenv import load_dotenv
 import random
 import hashlib
+from collections import Counter
 
 # 環境変数を読み込み
 load_dotenv()
@@ -34,21 +35,6 @@ intents.message_content = True
 intents.guilds = True  # ギルド（サーバー）情報取得用
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-def get_today_key():
-  """今日の日付キーを取得"""
-  return datetime.now(JST).strftime('%Y-%m-%d')
-
-def get_daily_role_index(user_id, today_date, role_count):
-  """ユーザーIDと日付から決定論的にロールインデックスを生成"""
-  # ユーザーIDと日付を組み合わせてハッシュ化
-  seed_string = f"{user_id}-{today_date}"
-  hash_object = hashlib.md5(seed_string.encode())
-  hash_hex = hash_object.hexdigest()
-  
-  # ハッシュの最初の8文字を16進数として解釈し、ロール数で割った余りを返す
-  hash_int = int(hash_hex[:8], 16)
-  return hash_int % role_count
-
 @bot.event
 async def on_ready():
   print(f'{bot.user} がログインしました！')
@@ -68,6 +54,21 @@ async def on_message(message):
   
   await check_and_react(message)
   await bot.process_commands(message)
+
+def get_today_key():
+  """今日の日付キーを取得"""
+  return datetime.now(JST).strftime('%Y-%m-%d')
+
+def get_daily_role_index(user_id, today_date, role_count):
+  """ユーザーIDと日付から決定論的にロールインデックスを生成"""
+  # ユーザーIDと日付を組み合わせてハッシュ化
+  seed_string = f"{user_id}-{today_date}"
+  hash_object = hashlib.md5(seed_string.encode())
+  hash_hex = hash_object.hexdigest()
+  
+  # ハッシュの最初の8文字を16進数として解釈し、ロール数で割った余りを返す
+  hash_int = int(hash_hex[:8], 16)
+  return hash_int % role_count
 
 async def add_reaction(message, emoji):
   if emoji.startswith('<') and emoji.endswith('>'):
@@ -155,6 +156,60 @@ async def slash_mynick(interaction: discord.Interaction):
   await interaction.response.send_message(embed=embed)
   
   print(f'[{datetime.now(JST).strftime("%H:%M")}] あだ名決定: {interaction.user.display_name} -> {nickname} (固定)')
+
+
+@bot.tree.command(name='mynick', description='今日のあだ名を決定します（1日固定）')
+async def slash_mynick(interaction: discord.Interaction):
+  spices = [
+    '砂糖',
+    '塩',
+    '酢',
+    '醤油',
+    '味噌',
+    '豆板醤',
+    '甜麺醤',
+    'オイスターソース',
+    'ごま油',
+    'バジル',
+    'パクチー',
+    '味の素',
+    'ほんだし',
+    'コンソメ'
+  ]
+  s1 = random.choice(spices)
+  s2 = random.choice(spices)
+  s3 = random.choice(spices)
+
+  # 3つの要素をリストにまとめる
+  selected_spices = [s1, s2, s3]
+  # Counterを使って各要素の出現回数を数える
+  counts = Counter(selected_spices)
+  v = ""
+
+  if counts == 1:
+    v = f"全部{s1}！！！ 濃い味で死！"
+  elif counts == 2:
+    v = f"2個も一緒！！！ それなりに濃い味で死！"
+  else:
+    v = "らしいよ"
+
+  if 'パクチー' in selected_spices:
+    v = f"{v} パクチーが入ってるから完全に死！！！！！"
+  
+  # 結果を表示
+  embed = discord.Embed(
+    title='調味料スロット',
+    description=f'{interaction.user.mention} がこれから使う調味料は',
+    color=discord.Color.gold()
+  )
+  embed.add_field(
+    name=f'{s1} {s2} {s3}',
+    value=v,
+    inline=False
+  )
+  embed.set_footer(text=f'ほら、使え<:blobcat_watchyou:1237029431680438273>')
+  
+  await interaction.response.send_message(embed=embed)
 
 # 従来のプレフィックスコマンドも残す（互換性のため）
 @bot.command(name='reactions')
