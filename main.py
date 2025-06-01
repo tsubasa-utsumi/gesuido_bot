@@ -104,7 +104,7 @@ async def check_and_react(message):
         else:
           await add_reaction(message, emoji)
         
-        print(f'[{datetime.now(JST).strftime("%H:%M")}] リアクション追加: "{keyword}" -> {emoji}')
+        # print(f'[{datetime.now(JST).strftime("%H:%M")}] リアクション追加: "{keyword}" -> {emoji}')
       except discord.HTTPException as e:
         print(f'リアクション追加エラー: {e}')
       except Exception as e:
@@ -159,7 +159,7 @@ async def slash_mynick(interaction: discord.Interaction):
   
   await interaction.response.send_message(embed=embed)
   
-  print(f'[{datetime.now(JST).strftime("%H:%M")}] あだ名決定: {interaction.user.display_name} -> {nickname} (固定)')
+  # print(f'[{datetime.now(JST).strftime("%H:%M")}] あだ名決定: {interaction.user.display_name} -> {nickname} (固定)')
 
 @bot.tree.command(name='spice', description='調味料スロット！')
 async def slash_mynick(interaction: discord.Interaction):
