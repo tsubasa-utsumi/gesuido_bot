@@ -6,19 +6,19 @@ CONTAINER_NAME="gesuido_bot"
 case "$1" in
   start)
     echo "🚀 Gesuido Bot を起動します..."
-    docker-compose up -d
+    docker compose up -d
     echo "✅ Bot起動完了"
     ;;
     
   stop)
     echo "🛑 Gesuido Bot を停止します..."
-    docker-compose down
+    docker compose down
     echo "✅ Bot停止完了"
     ;;
     
   restart)
     echo "🔄 Gesuido Bot を再起動します..."
-    docker-compose restart
+    docker compose restart
     echo "✅ Bot再起動完了"
     ;;
     
@@ -28,7 +28,7 @@ case "$1" in
     
     # コンテナ状態確認
     echo "🔍 コンテナ状態:"
-    docker-compose ps
+    docker compose ps
     
     echo ""
     echo "💾 リソース使用量:"
@@ -52,24 +52,24 @@ case "$1" in
     echo "📝 Gesuido Bot ログ表示"
     if [ "$2" = "-f" ] || [ "$2" = "--follow" ]; then
       echo "リアルタイムログ監視中... (Ctrl+C で終了)"
-      docker-compose logs -f
+      docker compose logs -f
     else
       echo "最新ログ表示:"
-      docker-compose logs --tail=50
+      docker compose logs --tail=50
     fi
     ;;
     
   shell)
     echo "🐚 コンテナにシェル接続..."
-    docker-compose exec gesuido_bot /bin/bash
+    docker compose exec gesuido_bot /bin/bash
     ;;
     
   update)
     echo "🔄 Bot更新 (ソース変更後の再起動)"
     echo "1. イメージ再ビルド中..."
-    docker-compose build
+    docker compose build
     echo "2. コンテナ再起動中..."
-    docker-compose up -d
+    docker compose up -d
     echo "✅ 更新完了"
     ;;
     
@@ -79,7 +79,7 @@ case "$1" in
     read -p "実行しますか？ (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-      docker-compose down
+      docker compose down
       docker system prune -f
       echo "✅ クリーンアップ完了"
     else
@@ -92,7 +92,7 @@ case "$1" in
     BACKUP_NAME="gesuido_bot_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
     tar -czf "$BACKUP_NAME" \
       .env \
-      docker-compose.yml \
+      docker compose.yml \
       Dockerfile \
       main.py \
       requirements.txt \
