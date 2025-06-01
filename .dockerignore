@@ -1,0 +1,47 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ログ
+logs/
+*.log
+
+# Docker関連ファイル
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 環境変数（別途マウント）
+.env
+
+# Railway関連（不要）
+railway.toml
+Procfile
+runtime.txt
+.github/
+
+# セットアップスクリプト
+setup.sh
+install_dependencies.sh
+
+# systemd関連（Docker環境では不要）
+*.service

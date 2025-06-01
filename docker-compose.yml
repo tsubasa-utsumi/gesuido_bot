@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  gesuido_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gesuido_bot
+    restart: unless-stopped
+    
+    # ボリュームマウント設定
+    volumes:
+      # ソースコード全体をマウント（読み書き可能）
+      - .:/app
+      # ログディレクトリをホストにマウント
+      - ./logs:/var/log/gesuido_bot
+      # 環境変数ファイルを明示的にマウント
+      - ./.env:/app/.env:ro
+    
+    # 環境変数
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Tokyo
+    
+    # ログ設定
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # ヘルスチェック（オプション）
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f main.py || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # セキュリティ設定
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    
+    # リソース制限（オプション）
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
