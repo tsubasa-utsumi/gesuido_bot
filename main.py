@@ -278,6 +278,50 @@ async def slash_mynick(interaction: discord.Interaction):
 
   await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name='negitoro', description='ねぎとろスロット')
+async def slash_mynick(interaction: discord.Interaction):
+  tomato = "<a:negitoro_yoke:1379052510932635768>"
+  negitoro = "<:tomatoski:1379057098511351878>"
+  words = [
+    tomato,
+    negitoro,
+  ]
+  s1 = random.choice(words)
+  s2 = random.choice(words)
+  s3 = random.choice(words)
+
+  v = "さぁいくぞ！"
+  if s1 == s3 == tomato and s2 == negitoro:
+    v = "オラ！トマト食え！"
+  elif s1 == s2 == s3 == tomato:
+    v = "チッ、逃げられたか"
+  elif s1 == s2 == s3 == negitoro:
+    v = "トマトがなくて今だけは平和だね＾＾"
+  elif s1 == s3 == negitoro and s2 == tomato:
+    v = "仲良く分けて食べなさい＾＾"
+
+  # 特定のユーザに1/2でトマト
+  if str(interaction.user.id) == os.getenv('TOMATO_USER'):
+    s1 = tomato
+    s2 = negitoro
+    s3 = tomato
+    v = "お前は常にこれだ"
+
+  # 結果を表示
+  embed = discord.Embed(
+    title='ねぎとろスロット',
+    description=f'みんな大好きなねぎとろさん',
+    color=discord.Color.gold()
+  )
+  embed.add_field(
+    name=v,
+    value=f'{s1}　{s2}　{s3}',
+    inline=False
+  )
+  embed.set_footer(text='ヤッホオオオオオオオウ！！！')
+
+  await interaction.response.send_message(embed=embed)
+
 # 従来のプレフィックスコマンドも残す（互換性のため）
 @bot.command(name='reactions')
 async def show_reactions(ctx):
